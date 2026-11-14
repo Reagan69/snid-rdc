@@ -11,6 +11,6 @@ export const metadata = { title: "CENI" };
 export default async function CeniPage() {
   const ctx = await requireAuth();
   if (!can(ctx.user.roleCode, "institutions:read")) redirect("/dashboard");
-  const comptes = await listInstitutionAccounts(ctx, "CENI");
-  return <InstitutionView institution={INSTITUTIONS.CENI} habilitations={describeHabilitations("CENI")} comptes={comptes} canManage={can(ctx.user.roleCode, "institutions:manage")} />;
+  const comptes = await listInstitutionAccounts(ctx, INSTITUTIONS.CENI.roles);
+  return <InstitutionView institution={INSTITUTIONS.CENI} habilitations={describeHabilitations("CENI")} comptes={comptes} canManage={can(ctx.user.roleCode, "institutions:manage")} canDelete={can(ctx.user.roleCode, "users:delete")} canAudit={can(ctx.user.roleCode, "audit:read")} />;
 }

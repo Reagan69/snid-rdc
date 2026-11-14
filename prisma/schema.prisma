@@ -127,6 +127,7 @@ model Utilisateur {
   demo              Boolean   @default(false) // compte FICTIF de démonstration
   creePar           String?
   derniereConnexion DateTime?
+  supprimeLe        DateTime? // compte supprimé ayant laissé des traces (déclarations, cartes) : archivé, jamais effacé
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -396,6 +397,7 @@ model JournalAudit {
   user       Utilisateur? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
+  @@index([username])
   @@index([userId, createdAt])
   @@index([action, createdAt])
   @@index([entite, entiteId])

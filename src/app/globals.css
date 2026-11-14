@@ -70,6 +70,7 @@
 @layer components {
   .btn { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-[10px] border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50; }
   .btn-primary { @apply border-sky-700 bg-sky-700 text-white shadow-[0_1px_2px_rgb(14_42_71/0.25)] hover:border-sky-800 hover:bg-sky-800; }
+  .btn-sm { @apply min-h-8 rounded-lg px-3 py-1 text-[13px]; }
   .btn-danger { @apply border-red-700 bg-red-700 text-white hover:bg-red-800; }
   .field { @apply min-h-10 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-600 focus:outline-2 focus:outline-sky-600/60 disabled:bg-slate-100; }
   .label { @apply mb-1.5 block text-sm font-medium text-slate-700; }

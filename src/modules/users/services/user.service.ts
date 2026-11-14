@@ -18,7 +18,7 @@ import type { AuthContext } from "@/types/auth";
 
 const userSelect = {
   id: true, username: true, nomComplet: true, roleCode: true, actif: true, motifSuspension: true, totpActif: true,
-  telephone: true, email: true, dateDebutFonction: true, demo: true, derniereConnexion: true, createdAt: true,
+  telephone: true, email: true, dateDebutFonction: true, demo: true, derniereConnexion: true, createdAt: true, creePar: true,
   affectation: { select: { niveau: true, circonscription: { select: { nom: true } }, province: { select: { nom: true } }, commune: { select: { nom: true } }, quartier: { select: { nom: true } }, rue: { select: { nom: true } } } },
 } satisfies Prisma.UtilisateurSelect;
 
@@ -26,12 +26,21 @@ export async function listUsers(ctx: AuthContext) {
   assertPermission(ctx, "users:read");
   const roles = MANAGEABLE_ROLES[ctx.user.roleCode];
   if (roles.length === 0) return [];
-  return prisma.utilisateur.findMany({
-    where: { roleCode: { in: [...roles] }, affectation: { is: scopeWhere(ctx.scope) } },
+  const rows = await prisma.utilisateur.findMany({
+    where: { roleCode: { in: [...roles] }, supprimeLe: null, affectation: { is: scopeWhere(ctx.scope) } },
     select: userSelect,
     orderBy: [{ roleCode: "asc" }, { nomComplet: "asc" }],
     take: 500,
   });
+  return withCreators(rows);
+}
+
+/** Supervision : ajoute à chaque compte l'identité de celui qui l'a ouvert (visible de l'administrateur). */
+async function withCreators<T extends { creePar: string | null }>(rows: T[]) {
+  const ids = [...new Set(rows.map((r) => r.creePar).filter((x): x is string => !!x))];
+  const creators = ids.length ? await prisma.utilisateur.findMany({ where: { id: { in: ids } }, select: { id: true, nomComplet: true, username: true } }) : [];
+  const byId = new Map(creators.map((c) => [c.id, c]));
+  return rows.map((r) => ({ ...r, createur: r.creePar ? byId.get(r.creePar) ?? null : null }));
 }
 
 /** Un gouverneur actif par province, un bourgmestre actif par commune. */
@@ -60,6 +69,11 @@ export async function createUser(ctx: AuthContext, input: CreateUserInput) {
   const passwordHash = await hashPassword(password);
 
   const created = await prisma.$transaction(async (tx) => {
+    // 0. Identifiant : unique, et jamais réutilisé après suppression (le journal d'audit doit rester sans ambiguïté).
+    if (await tx.utilisateur.findUnique({ where: { username: input.username }, select: { id: true } })) throw Errors.conflict("Cet identifiant est déjà utilisé.");
+    if (await tx.journalAudit.findFirst({ where: { username: input.username }, select: { id: true } })) {
+      throw Errors.conflict("Cet identifiant a déjà servi à un compte supprimé : choisissez-en un autre, pour que l'historique d'audit reste sans ambiguïté.");
+    }
     // 1. Résolution du périmètre complet (chaîne d'ancêtres) depuis l'identifiant le plus bas fourni.
     let scope: Scope;
     let rueId: string;
@@ -127,7 +141,7 @@ export async function createUser(ctx: AuthContext, input: CreateUserInput) {
 async function loadManageable(ctx: AuthContext, id: string) {
   assertPermission(ctx, "users:update");
   const t = await prisma.utilisateur.findUnique({ where: { id }, include: { affectation: true } });
-  if (!t || !t.affectation) throw Errors.notFound();
+  if (!t || !t.affectation || t.supprimeLe) throw Errors.notFound();
   const a = t.affectation;
   const targetScope: Scope = { level: a.niveau, provinceId: a.provinceId, communeId: a.communeId, quartierId: a.quartierId, rueId: a.rueId };
   if (!scopeContains(ctx.scope, targetScope)) throw Errors.notFound();
@@ -145,6 +159,30 @@ export async function updateUser(ctx: AuthContext, id: string, input: UpdateUser
         await writeAudit(tx, ctx, { action: "UTILISATEUR_SUSPENDU", entite: "Utilisateur", entiteId: id, details: { username: target.username, motif: input.motif } });
       });
       return { ok: true };
+    }
+    case "SUPPRIMER": {
+      assertPermission(ctx, "users:delete");
+      if (id === ctx.user.id) throw Errors.forbidden("Vous ne pouvez pas supprimer votre propre compte.");
+      const mode = await prisma.$transaction(async (tx) => {
+        // Un compte qui a agi (déclarations, approbations, cartes, candidature) est ARCHIVÉ : l'historique légal reste intact.
+        // Un compte qui n'a jamais agi est effacé ; le journal d'audit conserve son identifiant (lien en SetNull).
+        const u = await tx.utilisateur.findUniqueOrThrow({
+          where: { id },
+          select: { _count: { select: { declarations: true, approbations: true, cartesEmises: true, cartesSignees: true } }, candidature: { select: { id: true } } },
+        });
+        const c = u._count;
+        const aAgi = c.declarations + c.approbations + c.cartesEmises + c.cartesSignees > 0 || !!u.candidature;
+        const subordonnes = await tx.utilisateur.count({ where: { creePar: id, supprimeLe: null } });
+        await writeAudit(tx, ctx, { action: "UTILISATEUR_SUPPRIME", entite: "Utilisateur", entiteId: id, details: { username: target.username, role: target.roleCode, mode: aAgi ? "archive" : "definitive", motif: input.motif, subordonnes } });
+        if (aAgi) {
+          await tx.session.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+          await tx.utilisateur.update({ where: { id }, data: { supprimeLe: new Date(), actif: false, motifSuspension: `Supprimé : ${input.motif}` } });
+        } else {
+          await tx.utilisateur.delete({ where: { id } }); // sessions et affectation partent en cascade
+        }
+        return aAgi ? ("archive" as const) : ("definitive" as const);
+      });
+      return { ok: true, mode };
     }
     case "REACTIVER": {
       await prisma.$transaction(async (tx) => {
@@ -191,7 +229,7 @@ export async function listGovernors(ctx: AuthContext) {
   const [provinces, governors] = await Promise.all([
     prisma.province.findMany({ orderBy: { code: "asc" }, select: { id: true, code: true, nom: true, chefLieu: true, statut: true } }),
     prisma.utilisateur.findMany({
-      where: { roleCode: "GOUVERNEUR" },
+      where: { roleCode: "GOUVERNEUR", supprimeLe: null },
       select: { id: true, username: true, nomComplet: true, actif: true, telephone: true, email: true, dateDebutFonction: true, demo: true, createdAt: true, affectation: { select: { provinceId: true } } },
       orderBy: [{ actif: "desc" }, { createdAt: "desc" }],
     }),
@@ -204,13 +242,14 @@ export async function listGovernors(ctx: AuthContext) {
   return provinces.map((p) => ({ province: p, gouverneur: byProvince.get(p.id) ?? null }));
 }
 
-/** Comptes d'une institution nationale (CENI, DGM) : actifs d'abord, puis les plus récents. */
-export async function listInstitutionAccounts(ctx: AuthContext, role: "CENI" | "DGM") {
+/** Comptes d'une institution nationale et de ses services (ex. DGM + agents) : actifs d'abord, puis les plus récents. */
+export async function listInstitutionAccounts(ctx: AuthContext, roles: readonly string[]) {
   assertPermission(ctx, "institutions:read");
-  return prisma.utilisateur.findMany({
-    where: { roleCode: role },
-    select: { id: true, username: true, nomComplet: true, actif: true, motifSuspension: true, totpActif: true, telephone: true, email: true, dateDebutFonction: true, demo: true, derniereConnexion: true },
+  const rows = await prisma.utilisateur.findMany({
+    where: { roleCode: { in: [...roles] }, supprimeLe: null },
+    select: { id: true, username: true, nomComplet: true, roleCode: true, actif: true, motifSuspension: true, totpActif: true, telephone: true, email: true, dateDebutFonction: true, demo: true, derniereConnexion: true, creePar: true },
     orderBy: [{ actif: "desc" }, { createdAt: "desc" }],
     take: 200,
   });
+  return withCreators(rows);
 }

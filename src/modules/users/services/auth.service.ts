@@ -26,7 +26,7 @@ export async function login(input: { username: string; password: string; totp?: 
     throw new AppError(401, "INVALID_CREDENTIALS", GENERIC);
   };
 
-  if (!user) {
+  if (!user || user.supprimeLe) {
     await burnPasswordCheck(input.password);
     return fail("inconnu");
   }

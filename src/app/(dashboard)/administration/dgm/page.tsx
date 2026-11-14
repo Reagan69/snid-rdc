@@ -11,6 +11,6 @@ export const metadata = { title: "DGM" };
 export default async function DgmPage() {
   const ctx = await requireAuth();
   if (!can(ctx.user.roleCode, "institutions:read")) redirect("/dashboard");
-  const comptes = await listInstitutionAccounts(ctx, "DGM");
-  return <InstitutionView institution={INSTITUTIONS.DGM} habilitations={describeHabilitations("DGM")} comptes={comptes} canManage={can(ctx.user.roleCode, "institutions:manage")} />;
+  const comptes = await listInstitutionAccounts(ctx, INSTITUTIONS.DGM.roles);
+  return <InstitutionView institution={INSTITUTIONS.DGM} habilitations={describeHabilitations("DGM")} comptes={comptes} canManage={can(ctx.user.roleCode, "institutions:manage")} canDelete={can(ctx.user.roleCode, "users:delete")} canAudit={can(ctx.user.roleCode, "audit:read")} />;
 }

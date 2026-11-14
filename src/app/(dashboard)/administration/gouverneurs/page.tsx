@@ -15,9 +15,11 @@ export default async function GouverneursPage() {
   if (!can(ctx.user.roleCode, "governors:read")) redirect("/dashboard");
   const rows = await listGovernors(ctx);
   const manage = can(ctx.user.roleCode, "governors:manage");
+  const canDelete = can(ctx.user.roleCode, "users:delete");
+  const canAudit = can(ctx.user.roleCode, "audit:read");
   return (
     <>
-      <PageTitle title="Gouverneurs de province" subtitle="Un gouverneur actif par province : lecture seule, périmètre limité à sa province." />
+      <PageTitle title="Gouverneurs de province" subtitle="Un gouverneur actif par province. Il consulte sa province et gère les comptes communaux de sa province, sous votre supervision." />
       {manage && <div className="mb-4"><CreateUserForm title="Créer le profil d'un gouverneur" roles={[{ code: "GOUVERNEUR", label: "Gouverneur de province", level: "PROVINCE" }]} /></div>}
       <Table head={["Code", "Province", "Chef-lieu", "Gouverneur", "Contact", "Prise de fonction", "Statut", ...(manage ? ["Actions"] : [])]}>
         {rows.map(({ province: p, gouverneur: g }) => (
@@ -29,7 +31,7 @@ export default async function GouverneursPage() {
             <td className="td text-xs">{g ? [g.telephone, g.email].filter(Boolean).join(" · ") || "—" : "—"}</td>
             <td className="td">{g ? formatDateFr(g.dateDebutFonction) : "—"}</td>
             <td className="td">{!g ? <Badge>Aucun compte</Badge> : g.actif ? <Badge tone="green">En fonction</Badge> : <Badge tone="red">Suspendu</Badge>}</td>
-            {manage && <td className="td">{g && <UserActions id={g.id} actif={g.actif} />}</td>}
+            {manage && <td className="td">{g && <UserActions id={g.id} actif={g.actif} username={g.username} canDelete={canDelete} activityHref={canAudit ? `/audit?username=${encodeURIComponent(g.username)}` : undefined} />}</td>}
           </tr>
         ))}
       </Table>

@@ -10,7 +10,8 @@ export const ROLE_CODES = [
   "SERVICE_COMMUNAL",
   "CHEF_QUARTIER",
   "CHEF_RUE",
-  "DGM", // Direction générale de migration : institution nationale, vérification de NIU uniquement
+  "DGM", // Direction générale de migration : institution nationale, vérification de NIU et gestion de ses agents
+  "AGENT_DGM", // agent de la DGM : vérification de NIU uniquement
   // Processus électoral
   "CENI",
   "CENTRE_TRAITEMENT",
@@ -34,6 +35,7 @@ export const PERMISSIONS = [
   "users:read",
   "users:create",
   "users:update",
+  "users:delete", // supprimer / archiver un compte : administrateur uniquement
   "governors:read",
   "governors:manage",
   "geography:read",
@@ -65,6 +67,7 @@ export const ROLE_LABELS: Record<RoleCode, string> = {
   CHEF_QUARTIER: "Chef de quartier",
   CHEF_RUE: "Chef de rue",
   DGM: "DGM – Direction générale de migration",
+  AGENT_DGM: "Agent DGM",
   CENI: "CENI – Commission électorale nationale indépendante",
   CENTRE_TRAITEMENT: "Centre de traitement des dossiers des candidats",
   CIRCONSCRIPTION: "Agent de circonscription électorale",
@@ -82,6 +85,7 @@ export const ROLE_SCOPE_LEVEL: Record<RoleCode, ScopeLevel> = {
   CHEF_QUARTIER: "QUARTIER",
   CHEF_RUE: "RUE",
   DGM: "NATIONAL", // contrôle aux frontières : vérification de NIU sur tout le territoire
+  AGENT_DGM: "NATIONAL",
   CENI: "NATIONAL", // la CENI couvre l'ensemble des provinces de la RDC
   CENTRE_TRAITEMENT: "NATIONAL", // reçoit toutes les candidatures
   CIRCONSCRIPTION: "PROVINCE", // province de la circonscription (+ circonscriptionId dans l'affectation)
@@ -91,12 +95,13 @@ export const ROLE_SCOPE_LEVEL: Record<RoleCode, ScopeLevel> = {
 export const ROLE_PERMISSIONS: Record<RoleCode, readonly Permission[]> = {
   ADMIN: [
     "citizens:read", "citizens:update", "niu:verify", "cards:read", "biometrics:read", "declarations:read", "declarations:decide",
-    "users:read", "users:create", "users:update", "governors:read", "governors:manage",
+    "users:read", "users:create", "users:update", "users:delete", "governors:read", "governors:manage",
     "geography:read", "geography:manage", "reports:read", "audit:read",
     "elections:read", "candidatures:read", "results:read", "institutions:read", "institutions:manage",
   ],
   AUDITEUR: ["geography:read", "governors:read", "reports:read", "audit:read", "institutions:read", "elections:read", "candidatures:read", "results:read"],
-  GOUVERNEUR: ["citizens:read", "declarations:read", "geography:read", "reports:read"],
+  // Le gouverneur consulte sa province et gère les comptes communaux (bourgmestres, chefs de bureau) de sa province.
+  GOUVERNEUR: ["citizens:read", "declarations:read", "geography:read", "reports:read", "users:read", "users:create", "users:update"],
   BOURGMESTRE: [
     "citizens:read", "citizens:update", "niu:verify", "cards:read", "declarations:read", "declarations:decide",
     "users:read", "users:create", "users:update", "geography:read", "reports:read",
@@ -113,9 +118,10 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly Permission[]> = {
     "users:read", "users:create", "users:update", "geography:read", "reports:read",
   ],
   CHEF_RUE: ["citizens:read", "citizens:create", "niu:verify", "declarations:read", "declarations:create", "geography:read"],
-  // Moindre privilège : la DGM vérifie l'authenticité d'un NIU (validité, initiales, commune, statut), sans accès aux dossiers.
-  // Toute extension (lecture de dossiers, cartes) est une décision de l'ONIP et du service juridique.
-  DGM: ["niu:verify"],
+  // Moindre privilège : la DGM vérifie l'authenticité d'un NIU (validité, initiales, commune, statut) et gère ses agents,
+  // sans accès aux dossiers. Toute extension (lecture de dossiers, cartes) est une décision de l'ONIP et du service juridique.
+  DGM: ["niu:verify", "users:read", "users:create", "users:update"],
+  AGENT_DGM: ["niu:verify"],
   CENI: [
     "elections:read", "elections:manage", "candidatures:read", "candidatures:create", "results:read",
     "users:read", "users:create", "users:update", "geography:read",
@@ -135,15 +141,18 @@ export function can(role: RoleCode, permission: Permission): boolean {
 
 /** Rôles qu'un rôle peut créer / suspendre (toujours dans son propre périmètre). */
 export const MANAGEABLE_ROLES: Record<RoleCode, readonly RoleCode[]> = {
-  ADMIN: ["AUDITEUR", "GOUVERNEUR", "BOURGMESTRE", "CHEF_BUREAU", "SERVICE_COMMUNAL", "CHEF_QUARTIER", "CHEF_RUE", "CENI", "DGM"],
+  ADMIN: ["AUDITEUR", "GOUVERNEUR", "BOURGMESTRE", "CHEF_BUREAU", "SERVICE_COMMUNAL", "CHEF_QUARTIER", "CHEF_RUE", "CENI", "DGM",
+    // Supervision : l'administrateur voit et contrôle aussi les comptes ouverts par les institutions.
+    "CIRCONSCRIPTION", "CENTRE_TRAITEMENT", "AGENT_DGM"],
   AUDITEUR: [],
-  GOUVERNEUR: [],
+  GOUVERNEUR: ["BOURGMESTRE", "CHEF_BUREAU"],
   BOURGMESTRE: ["CHEF_BUREAU", "SERVICE_COMMUNAL", "CHEF_QUARTIER", "CHEF_RUE"],
   CHEF_BUREAU: ["SERVICE_COMMUNAL", "CHEF_QUARTIER", "CHEF_RUE"],
   SERVICE_COMMUNAL: [],
   CHEF_QUARTIER: ["CHEF_RUE"],
   CHEF_RUE: [],
-  DGM: [],
+  DGM: ["AGENT_DGM"],
+  AGENT_DGM: [],
   // La CENI crée les comptes des circonscriptions de TOUTES les provinces et des centres de traitement.
   CENI: ["CIRCONSCRIPTION", "CENTRE_TRAITEMENT"],
   CENTRE_TRAITEMENT: [],

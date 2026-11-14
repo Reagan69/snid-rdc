@@ -27,6 +27,7 @@ export type CreateUserInput = z.infer<typeof createUserSchema>;
 export const updateUserSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("SUSPENDRE"), motif: z.string().trim().min(5, "Motif obligatoire").max(300) }),
   z.object({ action: z.literal("REACTIVER") }),
+  z.object({ action: z.literal("SUPPRIMER"), motif: z.string().trim().min(5, "Motif obligatoire").max(300) }),
   z.object({
     action: z.literal("MODIFIER"),
     nomComplet: z.string().trim().min(3).max(80).optional(),
