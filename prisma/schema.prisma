@@ -1,0 +1,520 @@
+// SNID-RDC – modèle de données PostgreSQL (Prisma 6)
+// Vercel : DATABASE_URL = connexion poolée (application) ; DIRECT_URL = connexion directe (migrations).
+
+generator client {
+  provider      = "prisma-client-js"
+  // « rhel-openssl-3.0.x » = environnement d'exécution des fonctions Vercel (Amazon Linux 2023).
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ───────────────────────── Administration territoriale ─────────────────────────
+
+enum ProvinceStatut {
+  PROVINCE
+  VILLE_PROVINCE
+}
+
+enum CommuneKind {
+  COMMUNE     // commune d'une ville
+  TERRITOIRE  // territoire (zone rurale)
+}
+
+enum QuartierKind {
+  QUARTIER
+  SECTEUR
+  CHEFFERIE
+}
+
+model Province {
+  id        String         @id @default(uuid())
+  code      Int            @unique // code NIU (2 chiffres) : Kinshasa = 1
+  nom       String         @unique
+  chefLieu  String
+  statut    ProvinceStatut @default(PROVINCE)
+  communes  Commune[]
+  affectations Affectation[]
+  citoyens  Citoyen[]
+  circonscriptions Circonscription[]
+}
+
+model Commune {
+  id         String      @id @default(uuid())
+  provinceId String
+  code       Int         // code NIU (2 chiffres), unique dans la province
+  nom        String
+  ville      String?
+  kind       CommuneKind @default(COMMUNE)
+  province   Province    @relation(fields: [provinceId], references: [id], onDelete: Restrict)
+  quartiers  Quartier[]
+  affectations Affectation[]
+  citoyens   Citoyen[]
+  circonscriptions Circonscription[]
+
+  @@unique([provinceId, code])
+  @@index([provinceId, nom])
+}
+
+model Quartier {
+  id        String       @id @default(uuid())
+  communeId String
+  code      Int          // code NIU (2 chiffres), unique dans la commune
+  nom       String
+  kind      QuartierKind @default(QUARTIER)
+  commune   Commune      @relation(fields: [communeId], references: [id], onDelete: Restrict)
+  rues      Rue[]
+  affectations Affectation[]
+  citoyens  Citoyen[]
+  declarations Declaration[]
+
+  @@unique([communeId, code])
+  @@index([communeId, nom])
+}
+
+// « Avenue / rue » : le chef de rue est rattaché à une rue.
+model Rue {
+  id         String   @id @default(uuid())
+  quartierId String
+  code       Int      // code NIU (4 chiffres), unique dans le quartier
+  nom        String
+  quartier   Quartier @relation(fields: [quartierId], references: [id], onDelete: Restrict)
+  affectations Affectation[]
+  citoyens   Citoyen[]
+  declarations Declaration[]
+
+  @@unique([quartierId, code])
+  @@unique([quartierId, nom])
+}
+
+// ───────────────────────── Utilisateurs, rôles, affectations ─────────────────────────
+
+enum ScopeLevel {
+  NATIONAL
+  PROVINCE
+  COMMUNE
+  QUARTIER
+  RUE
+}
+
+model Role {
+  code        String     @id // ADMIN, AUDITEUR, GOUVERNEUR, BOURGMESTRE, CHEF_BUREAU, SERVICE_COMMUNAL, CHEF_QUARTIER, CHEF_RUE
+  libelle     String
+  niveau      ScopeLevel // niveau territorial attendu pour ce rôle
+  utilisateurs Utilisateur[]
+}
+
+model Utilisateur {
+  id                String    @id @default(uuid())
+  username          String    @unique
+  nomComplet        String
+  passwordHash      String    // Argon2id
+  roleCode          String
+  actif             Boolean   @default(true)
+  motifSuspension   String?
+  mustChangePassword Boolean  @default(true)
+  echecsConnexion   Int       @default(0)
+  verrouilleJusqua  DateTime?
+  totpSecretChiffre String?   // AES-256-GCM (ENCRYPTION_KEY)
+  totpActif         Boolean   @default(false)
+  telephone         String?
+  email             String?
+  dateDebutFonction DateTime? @db.Date
+  demo              Boolean   @default(false) // compte FICTIF de démonstration
+  creePar           String?
+  derniereConnexion DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  role         Role          @relation(fields: [roleCode], references: [code])
+  affectation  Affectation?
+  sessions     Session[]
+  journal      JournalAudit[]
+  declarations Declaration[] @relation("DeclarationCreePar")
+  approbations DeclarationApprobation[]
+  cartesEmises CarteIdentite[] @relation("CarteEmisePar")
+  cartesSignees CarteIdentite[] @relation("CarteSigneePar")
+  candidature  Candidature?  @relation("CandidatureCompte")
+
+  @@index([roleCode, actif])
+}
+
+// Périmètre territorial d'un utilisateur : appliqué côté serveur à chaque opération sensible.
+model Affectation {
+  id         String      @id @default(uuid())
+  userId     String      @unique
+  niveau     ScopeLevel
+  provinceId String?
+  communeId  String?
+  quartierId String?
+  rueId      String?
+  // Rôle CIRCONSCRIPTION : circonscription électorale gérée (le périmètre reste celui de sa province).
+  circonscriptionId String?
+  user       Utilisateur @relation(fields: [userId], references: [id], onDelete: Cascade)
+  province   Province?   @relation(fields: [provinceId], references: [id])
+  commune    Commune?    @relation(fields: [communeId], references: [id])
+  quartier   Quartier?   @relation(fields: [quartierId], references: [id])
+  rue        Rue?        @relation(fields: [rueId], references: [id])
+  circonscription Circonscription? @relation(fields: [circonscriptionId], references: [id])
+
+  @@index([provinceId])
+  @@index([communeId])
+  @@index([quartierId])
+  @@index([rueId])
+  @@index([circonscriptionId])
+}
+
+// Sessions révocables : seul le SHA-256 du jeton est conservé.
+model Session {
+  id         String      @id @default(uuid())
+  userId     String
+  tokenHash  String      @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime    @default(now())
+  derniereActivite DateTime @default(now())
+  user       Utilisateur @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ───────────────────────── Citoyens, NIU, cartes, biométrie ─────────────────────────
+
+enum Sexe {
+  M
+  F
+}
+
+enum StatutCitoyen {
+  RESIDENT
+  EN_DEPLACEMENT
+  DECEDE
+}
+
+model Citoyen {
+  id             String        @id @default(uuid())
+  niu            String        @unique // CD-pp-cc-qq-rrrr-nnnnn
+  nom            String
+  postnom        String
+  prenom         String
+  dateNaissance  DateTime      @db.Date
+  lieuNaissance  String?
+  sexe           Sexe
+  nationalite    String        @default("Congolaise (RDC)")
+  statut         StatutCitoyen @default(RESIDENT)
+  dateDeces      DateTime?     @db.Date
+  adresse        String?
+  pereId         String?
+  mereId         String?
+  // Hiérarchie géographique dénormalisée : filtre de périmètre simple et indexable.
+  provinceId     String
+  communeId      String
+  quartierId     String
+  rueId          String
+  demo           Boolean       @default(false) // dossier FICTIF
+  creePar        String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  province   Province @relation(fields: [provinceId], references: [id])
+  commune    Commune  @relation(fields: [communeId], references: [id])
+  quartier   Quartier @relation(fields: [quartierId], references: [id])
+  rue        Rue      @relation(fields: [rueId], references: [id])
+  pere       Citoyen? @relation("Filiation", fields: [pereId], references: [id])
+  mere       Citoyen? @relation("FiliationMere", fields: [mereId], references: [id])
+  enfantsPere Citoyen[] @relation("Filiation")
+  enfantsMere Citoyen[] @relation("FiliationMere")
+  declarations Declaration[]
+  documents    Document[]
+  cartes       CarteIdentite[]
+  biometrie    DossierBiometrique?
+  candidatures Candidature[]
+
+  @@index([provinceId])
+  @@index([communeId])
+  @@index([quartierId])
+  @@index([rueId])
+  @@index([nom, postnom, prenom])
+  @@index([dateNaissance])
+}
+
+// Compteur atomique par préfixe (province-commune-quartier-rue) : garantit l'unicité du NIU.
+model NiuSequence {
+  prefixe String @id // ex. CD-01-12-05-0003
+  dernier Int    @default(0)
+}
+
+enum StatutCarte {
+  ACTIVE
+  EXPIREE
+  REVOQUEE
+  REMPLACEE
+}
+
+model CarteIdentite {
+  id             String      @id @default(uuid())
+  numero         String      @unique
+  citoyenId      String
+  dateDelivrance DateTime    @db.Date
+  dateExpiration DateTime    @db.Date
+  statut         StatutCarte @default(ACTIVE)
+  emisePar       String
+  signeePar      String?     // chef de rue autorisé (signature tracée)
+  createdAt      DateTime    @default(now())
+  citoyen        Citoyen     @relation(fields: [citoyenId], references: [id])
+  emetteur       Utilisateur @relation("CarteEmisePar", fields: [emisePar], references: [id])
+  signataire     Utilisateur? @relation("CarteSigneePar", fields: [signeePar], references: [id])
+
+  @@index([citoyenId, statut])
+}
+
+enum ModeBiometrie {
+  SIMULATION // démonstration : AUCUNE donnée biométrique réelle
+  REEL
+}
+
+enum StatutBiometrie {
+  EN_ATTENTE
+  COMPLET
+  INCOMPLET
+}
+
+model DossierBiometrique {
+  id               String          @id @default(uuid())
+  citoyenId        String          @unique
+  mode             ModeBiometrie   @default(SIMULATION)
+  statut           StatutBiometrie @default(EN_ATTENTE)
+  qualite          Int?
+  dateCapture      DateTime?
+  // Données réelles : uniquement chiffrées (AES-256-GCM), jamais en clair.
+  donneesChiffrees Bytes?
+  citoyen          Citoyen         @relation(fields: [citoyenId], references: [id], onDelete: Restrict)
+}
+
+// ───────────────────────── Déclarations (workflow de validation) ─────────────────────────
+
+enum TypeDeclaration {
+  NAISSANCE
+  IDENTIFICATION
+  DECES
+  ARRIVEE
+  DEPART
+}
+
+enum StatutDeclaration {
+  EN_ATTENTE
+  VALIDEE
+  REJETEE
+}
+
+enum Decision {
+  APPROUVEE
+  REJETEE
+}
+
+model Declaration {
+  id           String            @id @default(uuid())
+  numero       String            @unique // DCL-AAAA-nnnnnn
+  type         TypeDeclaration
+  statut       StatutDeclaration @default(EN_ATTENTE)
+  citoyenId    String?           // renseigné pour DECES / ARRIVEE / DEPART, ou après validation
+  donnees      Json              // contenu déclaré (validé par Zod)
+  provinceId   String
+  communeId    String
+  quartierId   String
+  rueId        String
+  creePar      String
+  motifRejet   String?
+  createdAt    DateTime          @default(now())
+  decideeLe    DateTime?
+  citoyen      Citoyen?          @relation(fields: [citoyenId], references: [id])
+  quartier     Quartier          @relation(fields: [quartierId], references: [id], onDelete: Restrict)
+  rue          Rue               @relation(fields: [rueId], references: [id], onDelete: Restrict)
+  auteur       Utilisateur       @relation("DeclarationCreePar", fields: [creePar], references: [id])
+  approbations DeclarationApprobation[]
+  documents    Document[]
+
+  @@index([statut, communeId])
+  @@index([quartierId])
+  @@index([rueId])
+}
+
+model DeclarationApprobation {
+  id            String      @id @default(uuid())
+  declarationId String
+  userId        String
+  roleCode      String
+  decision      Decision
+  motif         String?
+  createdAt     DateTime    @default(now())
+  declaration   Declaration @relation(fields: [declarationId], references: [id], onDelete: Cascade)
+  user          Utilisateur @relation(fields: [userId], references: [id])
+
+  @@unique([declarationId, roleCode])
+}
+
+// Pièces justificatives : métadonnées en base, fichier dans un stockage S3-compatible (voir docs/vercel).
+model Document {
+  id            String       @id @default(uuid())
+  citoyenId     String?
+  declarationId String?
+  type          String
+  nomFichier    String
+  mime          String
+  taille        Int
+  cleStockage   String       @unique
+  creePar       String
+  createdAt     DateTime     @default(now())
+  citoyen       Citoyen?     @relation(fields: [citoyenId], references: [id])
+  declaration   Declaration? @relation(fields: [declarationId], references: [id])
+
+  @@index([citoyenId])
+  @@index([declarationId])
+}
+
+// ───────────────────────── Journal d'audit (ajout seul) ─────────────────────────
+
+model JournalAudit {
+  id         String       @id @default(uuid())
+  userId     String?
+  username   String?
+  roleCode   String?
+  action     String
+  entite     String?
+  entiteId   String?
+  details    Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime     @default(now())
+  user       Utilisateur? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@index([entite, entiteId])
+}
+
+// ───────────────────────── Processus électoral (CENI) ─────────────────────────
+
+enum TypeScrutin {
+  PRESIDENTIELLE
+  LEGISLATIVE_NATIONALE
+  LEGISLATIVE_PROVINCIALE
+}
+
+enum StatutScrutin {
+  PLANIFIE // candidatures ouvertes, espace électeur invisible
+  OUVERT   // vote en cours : l'espace électeur est visible
+  CLOS     // vote terminé : saisie, publication et consultation des résultats
+}
+
+enum StatutCandidature {
+  RECUE
+  RECEVABLE
+  REJETEE
+}
+
+// Circonscription électorale, créée par la CENI (toutes provinces). `communeId` : rattachement facultatif à un territoire / une ville.
+model Circonscription {
+  id         String   @id @default(uuid())
+  provinceId String
+  communeId  String?
+  code       Int
+  nom        String
+  actif      Boolean  @default(true)
+  creePar    String?
+  createdAt  DateTime @default(now())
+  province   Province @relation(fields: [provinceId], references: [id], onDelete: Restrict)
+  commune    Commune? @relation(fields: [communeId], references: [id])
+  affectations Affectation[]
+  scrutins   ScrutinCirconscription[]
+  candidatures Candidature[]
+  resultats  ResultatCandidat[]
+
+  @@unique([provinceId, code])
+  @@unique([provinceId, nom])
+}
+
+model Scrutin {
+  id          String        @id @default(uuid())
+  code        String        @unique // ex. LEG-2028
+  libelle     String
+  type        TypeScrutin
+  statut      StatutScrutin @default(PLANIFIE)
+  dateScrutin DateTime      @db.Date
+  ouvertLe    DateTime?
+  closLe      DateTime?
+  creePar     String
+  createdAt   DateTime      @default(now())
+  circonscriptions ScrutinCirconscription[]
+  candidatures     Candidature[]
+  resultats        ResultatCandidat[]
+
+  @@index([statut])
+}
+
+// Participation d'une circonscription à un scrutin : nombre de sièges (fixé par la CENI) et totaux du vote.
+model ScrutinCirconscription {
+  id         String   @id @default(uuid())
+  scrutinId  String
+  circonscriptionId String
+  sieges     Int      @default(0)
+  inscrits   Int?
+  votants    Int?
+  nuls       Int?
+  saisiPar   String?
+  saisiLe    DateTime?
+  publie     Boolean  @default(false)
+  publieLe   DateTime?
+  publiePar  String?
+  scrutin    Scrutin         @relation(fields: [scrutinId], references: [id], onDelete: Cascade)
+  circonscription Circonscription @relation(fields: [circonscriptionId], references: [id], onDelete: Restrict)
+
+  @@unique([scrutinId, circonscriptionId])
+}
+
+// Une seule candidature par citoyen et par scrutin (contrainte en base : aucune candidature double possible).
+model Candidature {
+  id         String            @id @default(uuid())
+  numero     String            @unique // CAN-AAAA-nnnnnn
+  scrutinId  String
+  citoyenId  String
+  circonscriptionId String?    // null pour la présidentielle (enregistrée par la CENI)
+  parti      String?
+  statut     StatutCandidature @default(RECUE)
+  motifRejet String?
+  creePar    String
+  decidePar  String?
+  decideLe   DateTime?
+  userId     String?           @unique // compte « candidat » (consultation des résultats)
+  createdAt  DateTime          @default(now())
+  scrutin    Scrutin           @relation(fields: [scrutinId], references: [id], onDelete: Restrict)
+  citoyen    Citoyen           @relation(fields: [citoyenId], references: [id])
+  circonscription Circonscription? @relation(fields: [circonscriptionId], references: [id])
+  compte     Utilisateur?      @relation("CandidatureCompte", fields: [userId], references: [id])
+  resultats  ResultatCandidat[]
+
+  @@unique([scrutinId, citoyenId])
+  @@index([scrutinId, circonscriptionId, statut])
+}
+
+model ResultatCandidat {
+  id            String   @id @default(uuid())
+  scrutinId     String
+  circonscriptionId String
+  candidatureId String
+  voix          Int
+  scrutin       Scrutin         @relation(fields: [scrutinId], references: [id], onDelete: Restrict)
+  circonscription Circonscription @relation(fields: [circonscriptionId], references: [id], onDelete: Restrict)
+  candidature   Candidature     @relation(fields: [candidatureId], references: [id], onDelete: Restrict)
+
+  @@unique([candidatureId, circonscriptionId])
+  @@index([scrutinId, circonscriptionId])
+}

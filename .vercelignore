@@ -1,0 +1,6 @@
+# Exclus du déploiement (inutiles à l'exécution)
+docs
+tests
+prisma/data
+.github
+*.md
