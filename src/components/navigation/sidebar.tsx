@@ -10,18 +10,34 @@ export function Sidebar({ items }: { items: NavItem[] }) {
   const path = usePathname();
   // L'entrée la plus spécifique gagne (ex. /citoyens/nouveau avant /citoyens).
   const active = [...items].sort((a, b) => b.href.length - a.href.length).find((i) => path === i.href || path.startsWith(i.href + "/"))?.href;
+  // Regroupe les entrées consécutives de même groupe ; un groupe sans entrée visible n'est pas affiché.
+  const sections: { group?: string; items: NavItem[] }[] = [];
+  for (const i of items) {
+    const last = sections[sections.length - 1];
+    if (last && last.group === i.group) last.items.push(i);
+    else sections.push({ group: i.group, items: [i] });
+  }
   return (
-    <nav aria-label="Navigation principale" className="flex gap-1 overflow-x-auto p-2 md:flex-col md:overflow-visible">
-      {items.map((i) => {
-        const Icon = ICONS[i.icon];
-        const on = i.href === active;
-        return (
-          <Link key={i.href} href={i.href} aria-current={on ? "page" : undefined}
-            className={`flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm ${on ? "bg-sky-700 text-white" : "text-slate-700 hover:bg-slate-100"}`}>
-            <Icon className="h-4 w-4" aria-hidden /> <span className="whitespace-nowrap">{i.label}</span>
-          </Link>
-        );
-      })}
+    <nav aria-label="Navigation principale" className="space-y-5">
+      {sections.map((s, n) => (
+        <div key={s.group ?? `s${n}`}>
+          {s.group && <p className="mb-1 px-3 text-xs font-semibold text-slate-400">{s.group}</p>}
+          <ul className="space-y-0.5">
+            {s.items.map((i) => {
+              const Icon = ICONS[i.icon];
+              const on = i.href === active;
+              return (
+                <li key={i.href}>
+                  <Link href={i.href} aria-current={on ? "page" : undefined}
+                    className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-[15px] transition-colors ${on ? "bg-white/10 font-semibold text-white before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-etoile" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}>
+                    <Icon className="h-4 w-4 shrink-0" aria-hidden /> <span>{i.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
     </nav>
   );
 }

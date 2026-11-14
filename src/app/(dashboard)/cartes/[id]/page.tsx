@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Niu } from "@/components/ui/niu";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
 import { getCard } from "@/modules/cards/services/card.service";
@@ -21,7 +22,7 @@ export default async function CartePage({ params }: { params: Promise<{ id: stri
         <div className="space-y-1 text-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-sky-800">République démocratique du Congo · Carte d'identité nationale</p>
           <p className="text-lg font-semibold">{c.nom} {c.postnom} {c.prenom}</p>
-          <p>NIU : <span className="font-mono">{c.niu}</span></p>
+          <p>NIU : <Niu niu={c.niu} /></p>
           <p>Né(e) le {formatDateFr(c.dateNaissance)} · {c.sexe === "M" ? "Masculin" : "Féminin"}</p>
           <p>{c.commune.nom} · {c.quartier.nom} · {c.rue.nom}</p>
           <p>Délivrée le {formatDateFr(k.dateDelivrance)} · expire le {formatDateFr(k.dateExpiration)}</p>

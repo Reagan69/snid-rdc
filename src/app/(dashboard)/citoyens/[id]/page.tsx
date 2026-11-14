@@ -5,6 +5,7 @@ import { can } from "@/modules/roles/permissions";
 import { getCitizen } from "@/modules/citizens/services/citizen.service";
 import { Badge, statutTone } from "@/components/ui/badge";
 import { PageTitle } from "@/components/ui/page";
+import { Niu } from "@/components/ui/niu";
 import { BiometricButton } from "@/components/forms/biometric-button";
 import { formatDateFr } from "@/lib/dates";
 import Link from "next/link";
@@ -17,7 +18,7 @@ export default async function CitoyenPage({ params }: { params: Promise<{ id: st
   const ctx = await requireAuth();
   const c = await getCitizen(ctx, id); // 404 si hors périmètre
   const rows: [string, React.ReactNode][] = [
-    ["NIU", <span key="n" className="font-mono">{c.niu}</span>],
+    ["NIU", <Niu key="n" niu={c.niu} />],
     ["Nom complet", `${c.nom} ${c.postnom} ${c.prenom}`],
     ["Sexe", c.sexe === "M" ? "Masculin" : "Féminin"],
     ["Naissance", `${formatDateFr(c.dateNaissance)}${c.lieuNaissance ? " · " + c.lieuNaissance : ""}`],

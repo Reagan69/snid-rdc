@@ -6,8 +6,8 @@ export function LogoutButton() {
   const router = useRouter();
   const { pending, run } = useApiAction();
   return (
-    <button className="btn" disabled={pending} onClick={async () => { await run("/api/auth/logout", { method: "POST", body: {} }); router.replace("/login"); router.refresh(); }}>
-      Déconnexion
+    <button className="btn btn-sidebar w-full" disabled={pending} onClick={async () => { await run("/api/auth/logout", { method: "POST", body: {} }); router.replace("/login"); router.refresh(); }}>
+      Se déconnecter
     </button>
   );
 }

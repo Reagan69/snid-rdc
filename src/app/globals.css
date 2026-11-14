@@ -1,15 +1,85 @@
 @import "tailwindcss";
 
-@layer components {
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50; }
-  .btn-primary { @apply border-sky-700 bg-sky-700 text-white hover:bg-sky-800; }
-  .btn-danger { @apply border-red-700 bg-red-700 text-white hover:bg-red-800; }
-  .field { @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600; }
-  .label { @apply mb-1 block text-xs font-medium text-slate-600; }
-  .card { @apply rounded-lg border border-slate-200 bg-white p-4 shadow-sm; }
-  .th { @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500; }
-  .td { @apply px-3 py-2 text-sm text-slate-800; }
+/* ───────── Identité visuelle SNID-RDC ─────────
+   Nuit du fleuve (navigation) · Bleu Congo (actions) · Jaune étoile (page courante) · Rouge drapeau (rejets, danger).
+   Les échelles « slate » et « sky » de Tailwind sont redéfinies : toutes les pages existantes en héritent. */
+@theme {
+  --color-nuit: #0c2340;
+  --color-etoile: #f5c518;
+
+  --color-slate-50: #f4f6f9;
+  --color-slate-100: #eaeef3;
+  --color-slate-200: #d9dfe8;
+  --color-slate-300: #c2cbd8;
+  --color-slate-400: #8c98aa;
+  --color-slate-500: #5f6d83;
+  --color-slate-600: #4a576b;
+  --color-slate-700: #36445a;
+  --color-slate-800: #22314a;
+  --color-slate-900: #14233a;
+  --color-slate-950: #0c1626;
+
+  --color-sky-50: #eef5fd;
+  --color-sky-100: #d9e8fa;
+  --color-sky-200: #b5d2f5;
+  --color-sky-300: #86b5ec;
+  --color-sky-400: #4f90df;
+  --color-sky-500: #2a74d2;
+  --color-sky-600: #1568cb;
+  --color-sky-700: #0a5fc4;
+  --color-sky-800: #0a4a99;
+  --color-sky-900: #0c2340;
+
+  --color-red-50: #fdf0f2;
+  --color-red-100: #fadbe0;
+  --color-red-700: #b4132b;
+  --color-red-800: #8f0f22;
+
+  --color-green-50: #eef8f2;
+  --color-green-100: #d6eee0;
+  --color-green-700: #1b7a4b;
+  --color-green-800: #15613b;
+  --color-green-900: #0f4a2c;
+
+  --color-amber-50: #fff7e3;
+  --color-amber-100: #fdebbe;
+  --color-amber-700: #9a5800;
+  --color-amber-800: #7c4700;
+  --color-amber-900: #5e3600;
 }
 
-:root { color-scheme: light; }
+@theme inline {
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-display: var(--font-title), var(--font-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html { font-size: 105%; }
+  h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.01em; }
+  :focus-visible { outline: 2px solid var(--color-sky-600); outline-offset: 2px; }
+  .on-dark :focus-visible { outline-color: var(--color-etoile); }
+}
+
+@layer components {
+  .btn { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply border-sky-700 bg-sky-700 text-white hover:bg-sky-800; }
+  .btn-danger { @apply border-red-700 bg-red-700 text-white hover:bg-red-800; }
+  .btn-sidebar { @apply border-white/20 bg-white/10 text-white hover:bg-white/20; }
+  .field { @apply min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-600 focus:outline-2 focus:outline-sky-600 disabled:bg-slate-100; }
+  .label { @apply mb-1 block text-sm font-medium text-slate-700; }
+  .card { @apply rounded-xl border border-slate-200 bg-white p-5; }
+  .th { @apply px-4 py-2.5 text-left text-[13px] font-semibold text-slate-600; }
+  .td { @apply px-4 py-2.5 text-sm text-slate-800; }
+
+  /* NIU : les segments territoriaux sont discrets, le numéro du citoyen ressort. */
+  .niu { @apply inline-flex items-baseline whitespace-nowrap text-slate-600; font-family: var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+  .niu-sep { @apply px-px text-slate-300; }
+  .niu-seq { @apply font-semibold text-sky-800; }
+  .niu-lg { @apply text-2xl; }
+}
+
 body { @apply bg-slate-50 text-slate-900 antialiased; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

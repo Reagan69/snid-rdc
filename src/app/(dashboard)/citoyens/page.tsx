@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Niu } from "@/components/ui/niu";
 import { requireAuth } from "@/lib/auth";
 import { listCitizens } from "@/modules/citizens/services/citizen.service";
 import { listCitizensQuery } from "@/modules/citizens/schemas/citizen.schema";
@@ -30,7 +31,7 @@ export default async function CitoyensPage({ searchParams }: { searchParams: SP 
         <Table head={["NIU", "Nom complet", "Naissance", "Sexe", "Commune", "Quartier · rue", "Statut"]}>
           {items.map((c) => (
             <tr key={c.id}>
-              <td className="td font-mono"><Link className="text-sky-700 underline" href={`/citoyens/${c.id}`}>{c.niu}</Link></td>
+              <td className="td"><Link className="underline decoration-slate-300 underline-offset-4 hover:decoration-sky-700" href={`/citoyens/${c.id}`}><Niu niu={c.niu} /></Link></td>
               <td className="td">{c.nom} {c.postnom} {c.prenom}</td>
               <td className="td">{formatDateFr(c.dateNaissance)}</td>
               <td className="td">{c.sexe}</td>
