@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   PERMISSIONS, ROLE_CODES, ROLE_PERMISSIONS, ROLE_SCOPE_LEVEL, can, canManageRole, isRoleCode,
 } from "../../src/modules/roles/permissions.ts";
+import { describeHabilitations } from "../../src/modules/roles/habilitations.ts";
 
 describe("RBAC", () => {
   it("chaque rôle a un niveau territorial et des permissions connues", () => {
@@ -40,5 +41,24 @@ describe("RBAC", () => {
     expect(isRoleCode("ADMIN")).toBe(true);
     expect(isRoleCode("admin")).toBe(false);
     expect(isRoleCode(undefined)).toBe(false);
+  });
+  it("institutions nationales : lecture pour ADMIN et AUDITEUR, gestion pour ADMIN seul", () => {
+    expect(ROLE_CODES.filter((r) => can(r, "institutions:read"))).toEqual(["ADMIN", "AUDITEUR"]);
+    expect(ROLE_CODES.filter((r) => can(r, "institutions:manage"))).toEqual(["ADMIN"]);
+  });
+  it("la DGM est nationale, ne peut que vérifier un NIU, et seul l'ADMIN gère ses comptes", () => {
+    expect(ROLE_SCOPE_LEVEL.DGM).toBe("NATIONAL");
+    expect([...ROLE_PERMISSIONS.DGM]).toEqual(["niu:verify"]);
+    for (const p of ["citizens:read", "cards:read", "declarations:read", "users:create", "audit:read"] as const) expect(can("DGM", p)).toBe(false);
+    expect(canManageRole("ADMIN", "DGM")).toBe(true);
+    expect(canManageRole("CENI", "DGM")).toBe(false);
+    expect(canManageRole("DGM", "DGM")).toBe(false);
+  });
+  it("les habilitations affichées proviennent des permissions réelles", () => {
+    expect(describeHabilitations("DGM")).toHaveLength(1);
+    const ceni = describeHabilitations("CENI").join(" | ");
+    expect(ceni).toContain("Créer les scrutins");
+    expect(ceni).toContain("Agent de circonscription électorale");
+    expect(ceni).not.toContain("dossiers des citoyens");
   });
 });

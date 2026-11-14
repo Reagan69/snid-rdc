@@ -203,3 +203,14 @@ export async function listGovernors(ctx: AuthContext) {
   }
   return provinces.map((p) => ({ province: p, gouverneur: byProvince.get(p.id) ?? null }));
 }
+
+/** Comptes d'une institution nationale (CENI, DGM) : actifs d'abord, puis les plus récents. */
+export async function listInstitutionAccounts(ctx: AuthContext, role: "CENI" | "DGM") {
+  assertPermission(ctx, "institutions:read");
+  return prisma.utilisateur.findMany({
+    where: { roleCode: role },
+    select: { id: true, username: true, nomComplet: true, actif: true, motifSuspension: true, totpActif: true, telephone: true, email: true, dateDebutFonction: true, demo: true, derniereConnexion: true },
+    orderBy: [{ actif: "desc" }, { createdAt: "desc" }],
+    take: 200,
+  });
+}

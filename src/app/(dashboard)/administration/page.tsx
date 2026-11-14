@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAuth } from "@/lib/auth";
+import { can } from "@/modules/roles/permissions";
 import { provinceOverview } from "@/modules/geography/services/geography.service";
 import { PageTitle, Table } from "@/components/ui/page";
 
@@ -11,7 +12,11 @@ export default async function AdministrationPage() {
   return (
     <>
       <PageTitle title="Administration territoriale" subtitle="Provinces, villes, communes, territoires, quartiers et rues (chaîne du NIU).">
-        <Link className="btn" href="/administration/gouverneurs">Gouverneurs de province</Link>
+        <div className="flex flex-wrap gap-3">
+          {can(ctx.user.roleCode, "governors:read") && <Link className="btn" href="/administration/gouverneurs">Gouverneurs de province</Link>}
+          {can(ctx.user.roleCode, "institutions:read") && <Link className="btn" href="/administration/ceni">CENI</Link>}
+          {can(ctx.user.roleCode, "institutions:read") && <Link className="btn" href="/administration/dgm">DGM</Link>}
+        </div>
       </PageTitle>
       <Table head={["Code NIU", "Province", "Chef-lieu", "Statut", "Communes et territoires"]}>
         {provinces.map((p) => (

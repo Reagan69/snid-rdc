@@ -122,6 +122,7 @@ async function seedDemo() {
 
   // Processus électoral (comptes FICTIFS) : CENI nationale, centre de traitement, une circonscription à Limete.
   await createUser({ username: "ceni.demo", nomComplet: "CENI — compte de démonstration", role: "CENI", password, scope: nat, demo: true });
+  await createUser({ username: "dgm.demo", nomComplet: "DGM — compte de démonstration", role: "DGM", password, scope: nat, demo: true });
   await createUser({ username: "ct.demo", nomComplet: "Centre de traitement des dossiers (démo)", role: "CENTRE_TRAITEMENT", password, scope: nat, demo: true });
   const kin = await prisma.province.findUnique({ where: { nom: "Kinshasa" } });
   const lim = await prisma.commune.findFirst({ where: { nom: "Limete", province: { nom: "Kinshasa" } } });
