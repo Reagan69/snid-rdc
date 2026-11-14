@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
-import { Niu } from "@/components/ui/niu";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
 import { getCard } from "@/modules/cards/services/card.service";
 import { Badge, statutTone } from "@/components/ui/badge";
 import { PageTitle } from "@/components/ui/page";
+import { CarteIdentite } from "@/components/ui/carte-identite";
 import { formatDateFr } from "@/lib/dates";
 
 export const metadata = { title: "Carte d'identité" };
@@ -17,23 +17,25 @@ export default async function CartePage({ params }: { params: Promise<{ id: stri
   const c = k.citoyen;
   return (
     <>
-      <PageTitle title={`Carte ${k.numero}`} />
-      <article className="card mx-auto grid max-w-xl gap-4 sm:grid-cols-[1fr_auto]">
-        <div className="space-y-1 text-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-sky-800">République démocratique du Congo · Carte d'identité nationale</p>
-          <p className="text-lg font-semibold">{c.nom} {c.postnom} {c.prenom}</p>
-          <p>NIU : <Niu niu={c.niu} /></p>
-          <p>Né(e) le {formatDateFr(c.dateNaissance)} · {c.sexe === "M" ? "Masculin" : "Féminin"}</p>
-          <p>{c.commune.nom} · {c.quartier.nom} · {c.rue.nom}</p>
-          <p>Délivrée le {formatDateFr(k.dateDelivrance)} · expire le {formatDateFr(k.dateExpiration)}</p>
-          <p>Signataire : {k.signataire?.nomComplet ?? "—"} · <Badge tone={statutTone(k.statut)}>{k.statut}</Badge></p>
-        </div>
-        <div className="text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={k.qrDataUrl} alt="QR code de vérification" width={140} height={140} className="mx-auto" />
-          <p className="mt-1 text-[10px] text-slate-500">Vérification publique<br />(validité et initiales seulement)</p>
-        </div>
-      </article>
+      <PageTitle title={`Carte ${k.numero}`} subtitle={`${c.prenom} ${c.postnom} ${c.nom}`}><Badge tone={statutTone(k.statut)}>{k.statut}</Badge></PageTitle>
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,470px)_1fr]">
+        <CarteIdentite carte={{
+          nom: c.nom, postnom: c.postnom, prenom: c.prenom, sexe: c.sexe === "M" ? "M" : "F",
+          naissance: formatDateFr(c.dateNaissance), niu: c.niu, commune: c.commune.nom,
+          delivree: formatDateFr(k.dateDelivrance), expire: formatDateFr(k.dateExpiration), qrDataUrl: k.qrDataUrl,
+        }} />
+        <dl className="card space-y-3 text-sm">
+          {([
+            ["Délivrée le", formatDateFr(k.dateDelivrance)],
+            ["Expire le", formatDateFr(k.dateExpiration)],
+            ["Signataire", k.signataire?.nomComplet ?? "—"],
+            ["Domicile", `${c.commune.nom}, ${c.quartier.nom}, ${c.rue.nom}`],
+          ] as [string, string][]).map(([a, b]) => (
+            <div key={a} className="grid grid-cols-[110px_1fr] gap-3"><dt className="text-slate-500">{a}</dt><dd className="text-slate-900">{b}</dd></div>
+          ))}
+          <p className="border-t border-slate-100 pt-3 text-xs text-slate-500">Le QR code mène à une vérification publique : elle n'affiche que la validité et les initiales.</p>
+        </dl>
+      </div>
     </>
   );
 }

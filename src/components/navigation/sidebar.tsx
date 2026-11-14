@@ -18,10 +18,10 @@ export function Sidebar({ items }: { items: NavItem[] }) {
     else sections.push({ group: i.group, items: [i] });
   }
   return (
-    <nav aria-label="Navigation principale" className="space-y-5">
+    <nav aria-label="Navigation principale" className="space-y-6">
       {sections.map((s, n) => (
         <div key={s.group ?? `s${n}`}>
-          {s.group && <p className="mb-1 px-3 text-xs font-semibold text-slate-400">{s.group}</p>}
+          {s.group && <p className="mb-1.5 px-3 text-xs font-medium text-laiton-clair/90">{s.group}</p>}
           <ul className="space-y-0.5">
             {s.items.map((i) => {
               const Icon = ICONS[i.icon];
@@ -29,7 +29,7 @@ export function Sidebar({ items }: { items: NavItem[] }) {
               return (
                 <li key={i.href}>
                   <Link href={i.href} aria-current={on ? "page" : undefined}
-                    className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-[15px] transition-colors ${on ? "bg-white/10 font-semibold text-white before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-etoile" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}>
+                    className={`relative flex items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] transition-colors ${on ? "bg-white/[0.09] font-medium text-white before:absolute before:inset-y-2.5 before:left-0 before:w-0.5 before:rounded-full before:bg-laiton-clair" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}>
                     <Icon className="h-4 w-4 shrink-0" aria-hidden /> <span>{i.label}</span>
                   </Link>
                 </li>

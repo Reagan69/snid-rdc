@@ -1,78 +1,87 @@
 @import "tailwindcss";
 
 /* ───────── Identité visuelle SNID-RDC ─────────
-   Nuit du fleuve (navigation) · Bleu Congo (actions) · Jaune étoile (page courante) · Rouge drapeau (rejets, danger).
-   Les échelles « slate » et « sky » de Tailwind sont redéfinies : toutes les pages existantes en héritent. */
+   Fleuve (bleu profond, navigation) · Saphir (actions) · Forêt (validation) · Laiton (filets, étoile) · Brique (alertes).
+   Les échelles « slate », « sky », « green », « amber » et « red » de Tailwind sont redéfinies :
+   toutes les pages existantes en héritent. */
 @theme {
-  --color-nuit: #0c2340;
-  --color-etoile: #f5c518;
+  --color-fleuve: #0e2a47;
+  --color-fleuve-2: #153a5e;
+  --color-laiton: #b8944b;
+  --color-laiton-clair: #dcc283;
 
-  --color-slate-50: #f4f6f9;
-  --color-slate-100: #eaeef3;
-  --color-slate-200: #d9dfe8;
-  --color-slate-300: #c2cbd8;
-  --color-slate-400: #8c98aa;
-  --color-slate-500: #5f6d83;
-  --color-slate-600: #4a576b;
-  --color-slate-700: #36445a;
-  --color-slate-800: #22314a;
-  --color-slate-900: #14233a;
-  --color-slate-950: #0c1626;
+  --color-slate-50: #f5f6f8;
+  --color-slate-100: #eceef2;
+  --color-slate-200: #e0e4ea;
+  --color-slate-300: #cbd1da;
+  --color-slate-400: #97a1b0;
+  --color-slate-500: #667285;
+  --color-slate-600: #4c586b;
+  --color-slate-700: #384355;
+  --color-slate-800: #252f40;
+  --color-slate-900: #18222f;
+  --color-slate-950: #0e1520;
 
-  --color-sky-50: #eef5fd;
-  --color-sky-100: #d9e8fa;
-  --color-sky-200: #b5d2f5;
-  --color-sky-300: #86b5ec;
-  --color-sky-400: #4f90df;
-  --color-sky-500: #2a74d2;
-  --color-sky-600: #1568cb;
-  --color-sky-700: #0a5fc4;
-  --color-sky-800: #0a4a99;
-  --color-sky-900: #0c2340;
+  --color-sky-50: #eef3fa;
+  --color-sky-100: #dce7f5;
+  --color-sky-200: #bcd0ea;
+  --color-sky-300: #92b0db;
+  --color-sky-400: #5f89c6;
+  --color-sky-500: #3a67ad;
+  --color-sky-600: #25589f;
+  --color-sky-700: #1d4f91;
+  --color-sky-800: #163f75;
+  --color-sky-900: #0e2a47;
 
-  --color-red-50: #fdf0f2;
-  --color-red-100: #fadbe0;
-  --color-red-700: #b4132b;
-  --color-red-800: #8f0f22;
+  --color-green-50: #edf6f2;
+  --color-green-100: #d5ebe2;
+  --color-green-700: #1f6b57;
+  --color-green-800: #185646;
+  --color-green-900: #12433a;
 
-  --color-green-50: #eef8f2;
-  --color-green-100: #d6eee0;
-  --color-green-700: #1b7a4b;
-  --color-green-800: #15613b;
-  --color-green-900: #0f4a2c;
+  --color-amber-50: #fbf5e6;
+  --color-amber-100: #f5e7bf;
+  --color-amber-700: #8a5a00;
+  --color-amber-800: #6f4800;
+  --color-amber-900: #563700;
 
-  --color-amber-50: #fff7e3;
-  --color-amber-100: #fdebbe;
-  --color-amber-700: #9a5800;
-  --color-amber-800: #7c4700;
-  --color-amber-900: #5e3600;
+  --color-red-50: #fbefef;
+  --color-red-100: #f5d9d9;
+  --color-red-700: #a3262f;
+  --color-red-800: #821d25;
+
+  /* Ombres teintées de la couleur de marque (jamais un gris générique). */
+  --shadow-panel: 0 1px 2px rgb(14 42 71 / 0.05), 0 14px 32px -16px rgb(14 42 71 / 0.22);
+  --shadow-carte: 0 2px 4px rgb(14 42 71 / 0.12), 0 30px 60px -20px rgb(4 14 28 / 0.55);
 }
 
 @theme inline {
   --font-sans: var(--font-body), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
-  --font-display: var(--font-title), var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-title), Georgia, "Times New Roman", serif;
 }
 
 @layer base {
   html { font-size: 105%; }
-  h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.01em; }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.012em; }
   :focus-visible { outline: 2px solid var(--color-sky-600); outline-offset: 2px; }
-  .on-dark :focus-visible { outline-color: var(--color-etoile); }
+  .on-dark :focus-visible { outline-color: var(--color-laiton-clair); }
 }
 
 @layer components {
-  .btn { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50; }
-  .btn-primary { @apply border-sky-700 bg-sky-700 text-white hover:bg-sky-800; }
+  .btn { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-[10px] border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply border-sky-700 bg-sky-700 text-white shadow-[0_1px_2px_rgb(14_42_71/0.25)] hover:border-sky-800 hover:bg-sky-800; }
   .btn-danger { @apply border-red-700 bg-red-700 text-white hover:bg-red-800; }
-  .btn-sidebar { @apply border-white/20 bg-white/10 text-white hover:bg-white/20; }
-  .field { @apply min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-600 focus:outline-2 focus:outline-sky-600 disabled:bg-slate-100; }
-  .label { @apply mb-1 block text-sm font-medium text-slate-700; }
-  .card { @apply rounded-xl border border-slate-200 bg-white p-5; }
-  .th { @apply px-4 py-2.5 text-left text-[13px] font-semibold text-slate-600; }
-  .td { @apply px-4 py-2.5 text-sm text-slate-800; }
+  .field { @apply min-h-10 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-600 focus:outline-2 focus:outline-sky-600/60 disabled:bg-slate-100; }
+  .label { @apply mb-1.5 block text-sm font-medium text-slate-700; }
+  .card { @apply rounded-2xl border border-slate-200 bg-white p-5; }
+  .th { @apply px-5 py-3 text-left text-[13px] font-medium text-slate-500; }
+  .td { @apply px-5 py-3.5 text-sm text-slate-800; }
+
+  /* Chiffres de titrage : empattement éditorial, chiffres alignés. */
+  .num { font-family: var(--font-display); font-weight: 500; font-feature-settings: "lnum" 1, "tnum" 1; letter-spacing: -0.015em; }
 
   /* NIU : les segments territoriaux sont discrets, le numéro du citoyen ressort. */
-  .niu { @apply inline-flex items-baseline whitespace-nowrap text-slate-600; font-family: var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+  .niu { @apply inline-flex items-baseline whitespace-nowrap text-slate-600; font-variant-numeric: tabular-nums lining-nums; letter-spacing: 0.02em; }
   .niu-sep { @apply px-px text-slate-300; }
   .niu-seq { @apply font-semibold text-sky-800; }
   .niu-lg { @apply text-2xl; }
