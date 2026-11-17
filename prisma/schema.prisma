@@ -520,3 +520,11 @@ model ResultatCandidat {
   @@unique([candidatureId, circonscriptionId])
   @@index([scrutinId, circonscriptionId])
 }
+
+// Réglages de fonctionnement modifiables par l'administrateur (clé → valeur JSON). Chaque modification est journalisée.
+model Parametre {
+  cle        String   @id
+  valeur     Json
+  modifiePar String?
+  updatedAt  DateTime @updatedAt
+}

@@ -8,6 +8,8 @@ import { findPotentialDuplicates } from "@/modules/citizens/repositories/citizen
 import { auditBestEffort, writeAudit } from "@/modules/audit/services/audit.service";
 import { allocateNiu, allocateNumber } from "@/modules/niu/services/niu.service";
 import { canDecide, isChainComplete } from "@/modules/declarations/workflow";
+import { getValidationDirecte } from "@/modules/settings/services/settings.service";
+import { estValidationDirecte } from "@/modules/settings/settings";
 import type { RoleCode } from "@/modules/roles/permissions";
 import {
   arriveeData, decesData, identificationData,
@@ -70,6 +72,9 @@ export async function createDeclaration(ctx: AuthContext, input: CreateDeclarati
     donnees = rest as Prisma.InputJsonValue;
   }
 
+  // Réglage de l'administrateur, lu AVANT la transaction (en cas d'échec : chaîne complète, le comportement le plus strict).
+  const direct = estValidationDirecte(ctx.user.roleCode, input.type, await getValidationDirecte());
+
   return prisma.$transaction(async (tx) => {
     const numero = await allocateNumber(tx, "DCL");
     const d = await tx.declaration.create({
@@ -79,8 +84,18 @@ export async function createDeclaration(ctx: AuthContext, input: CreateDeclarati
       },
       select: { id: true, numero: true, statut: true },
     });
-    await writeAudit(tx, ctx, { action: "DECLARATION_CREEE", entite: "Declaration", entiteId: d.id, details: { numero, type: input.type } });
-    return d;
+    await writeAudit(tx, ctx, { action: "DECLARATION_CREEE", entite: "Declaration", entiteId: d.id, details: { numero, type: input.type, validationDirecte: direct } });
+    if (!direct) return { ...d, niu: null as string | null };
+
+    // Validation directe : effets métier, approbation tracée et statut final dans la MÊME transaction que le dépôt.
+    const row = await tx.declaration.findUniqueOrThrow({ where: { id: d.id }, include: { approbations: { select: { roleCode: true } } } });
+    const niu = await applyEffects(tx, row);
+    await tx.declarationApprobation.create({
+      data: { declarationId: d.id, userId: ctx.user.id, roleCode: ctx.user.roleCode, decision: "APPROUVEE", motif: "Validation directe (réglage de l'administrateur)" },
+    });
+    await tx.declaration.update({ where: { id: d.id }, data: { statut: "VALIDEE", decideeLe: new Date() } });
+    await writeAudit(tx, ctx, { action: "DECLARATION_VALIDEE_DIRECTE", entite: "Declaration", entiteId: d.id, details: { numero, type: input.type, niu } });
+    return { ...d, statut: "VALIDEE" as const, niu };
   });
 }
 

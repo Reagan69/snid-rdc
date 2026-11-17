@@ -82,4 +82,8 @@ describe("RBAC", () => {
     expect(ceni).toContain("Agent de circonscription électorale");
     expect(ceni).not.toContain("dossiers des citoyens");
   });
+  it("réglages : lecture pour ADMIN et AUDITEUR, modification pour l'administrateur seul", () => {
+    expect(ROLE_CODES.filter((r) => can(r, "settings:read"))).toEqual(["ADMIN", "AUDITEUR"]);
+    expect(ROLE_CODES.filter((r) => can(r, "settings:manage"))).toEqual(["ADMIN"]);
+  });
 });

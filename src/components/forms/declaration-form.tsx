@@ -11,7 +11,7 @@ export function DeclarationForm({ types }: { types: DType[] }) {
   const { pending, error, run } = useApiAction();
   const [type, setType] = useState<DType>(types[0] as DType);
   const [doublon, setDoublon] = useState(false);
-  const [done, setDone] = useState<string | null>(null);
+  const [done, setDone] = useState<{ numero: string; validee: boolean; niu: string | null } | null>(null);
   const isPerson = type === "IDENTIFICATION" || type === "NAISSANCE";
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -26,8 +26,8 @@ export function DeclarationForm({ types }: { types: DType[] }) {
     else if (type === "DEPART") body = { type, niu: g("niu"), dateDepart: g("date"), destination: g("detail") };
     else body = { type, niu: g("niu"), dateArrivee: g("date"), provenance: g("detail") };
 
-    const r = await run<{ numero: string }>("/api/declarations", { body });
-    if (r.ok) { setDone(r.data.numero); setDoublon(false); (e.target as HTMLFormElement).reset(); router.refresh(); }
+    const r = await run<{ numero: string; statut: string; niu: string | null }>("/api/declarations", { body });
+    if (r.ok) { setDone({ numero: r.data.numero, validee: r.data.statut === "VALIDEE", niu: r.data.niu }); setDoublon(false); (e.target as HTMLFormElement).reset(); router.refresh(); }
   }
 
   return (
@@ -60,7 +60,13 @@ export function DeclarationForm({ types }: { types: DType[] }) {
         {error?.code === "DUPLICATE_SUSPECTED" && (
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={doublon} onChange={(e) => setDoublon(e.target.checked)} /> Je confirme qu'il s'agit bien d'une personne différente (homonyme).</label>
         )}
-        {done && <p role="status" className="text-sm text-green-700">Déclaration {done} enregistrée : elle suit maintenant la chaîne de validation.</p>}
+        {done && (
+          <p role="status" className="text-sm text-green-700">
+            {done.validee
+              ? <>Déclaration {done.numero} validée immédiatement{done.niu ? <> : NIU <b className="font-mono">{done.niu}</b></> : ""}.</>
+              : <>Déclaration {done.numero} enregistrée : elle suit maintenant la chaîne de validation.</>}
+          </p>
+        )}
         <button className="btn btn-primary" disabled={pending}>{pending ? "Envoi…" : "Déposer la déclaration"}</button>
       </div>
     </form>

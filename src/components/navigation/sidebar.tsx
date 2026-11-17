@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, FileText, Globe, Home, Landmark, Map, ScrollText, Search, Settings, ShieldCheck, UserPlus, Users, CreditCard, Vote } from "lucide-react";
+import { BarChart3, FileText, Globe, Home, Landmark, Map, ScrollText, Search, Settings, SlidersHorizontal, ShieldCheck, UserPlus, Users, CreditCard, Vote } from "lucide-react";
 import type { NavItem } from "./nav-items";
 
-const ICONS = { home: Home, users: Users, userplus: UserPlus, search: Search, file: FileText, card: CreditCard, shield: ShieldCheck, landmark: Landmark, map: Map, chart: BarChart3, scroll: ScrollText, settings: Settings, vote: Vote, globe: Globe } as const;
+const ICONS = { home: Home, users: Users, userplus: UserPlus, search: Search, file: FileText, card: CreditCard, shield: ShieldCheck, landmark: Landmark, map: Map, chart: BarChart3, scroll: ScrollText, settings: Settings, vote: Vote, globe: Globe, sliders: SlidersHorizontal } as const;
 
 export function Sidebar({ items }: { items: NavItem[] }) {
   const path = usePathname();

@@ -45,6 +45,9 @@ export const PERMISSIONS = [
   // Institutions nationales (CENI, DGM) : consultation et gestion de leurs comptes
   "institutions:read",
   "institutions:manage",
+  // Réglages de fonctionnement (ex. validation directe des déclarations des chefs de rue)
+  "settings:read",
+  "settings:manage",
   // Processus électoral
   "elections:read", // scrutins, circonscriptions, sièges
   "elections:manage", // CENI : créer scrutins et circonscriptions, fixer les sièges, ouvrir / clore, publier
@@ -98,8 +101,9 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly Permission[]> = {
     "users:read", "users:create", "users:update", "users:delete", "governors:read", "governors:manage",
     "geography:read", "geography:manage", "reports:read", "audit:read",
     "elections:read", "candidatures:read", "results:read", "institutions:read", "institutions:manage",
+    "settings:read", "settings:manage",
   ],
-  AUDITEUR: ["geography:read", "governors:read", "reports:read", "audit:read", "institutions:read", "elections:read", "candidatures:read", "results:read"],
+  AUDITEUR: ["geography:read", "governors:read", "reports:read", "audit:read", "institutions:read", "settings:read", "elections:read", "candidatures:read", "results:read"],
   // Le gouverneur consulte sa province et gère les comptes communaux (bourgmestres, chefs de bureau) de sa province.
   GOUVERNEUR: ["citizens:read", "declarations:read", "geography:read", "reports:read", "users:read", "users:create", "users:update"],
   BOURGMESTRE: [

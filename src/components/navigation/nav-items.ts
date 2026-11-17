@@ -3,7 +3,7 @@ import type { Permission } from "@/modules/roles/permissions";
 export interface NavItem {
   href: string;
   label: string;
-  icon: "home" | "users" | "userplus" | "search" | "file" | "card" | "shield" | "landmark" | "map" | "chart" | "scroll" | "settings" | "vote" | "globe";
+  icon: "home" | "users" | "userplus" | "search" | "file" | "card" | "shield" | "landmark" | "map" | "chart" | "scroll" | "settings" | "vote" | "globe" | "sliders";
   permission?: Permission;
   /** Titre de section dans le menu (les entrées consécutives de même groupe sont regroupées). */
   group?: string;
@@ -27,5 +27,6 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/administration", label: "Administration territoriale", icon: "map", permission: "geography:read", group: "Administration" },
   { href: "/rapports", label: "Rapports", icon: "chart", permission: "reports:read", group: "Administration" },
   { href: "/audit", label: "Journal d'audit", icon: "scroll", permission: "audit:read", group: "Administration" },
+  { href: "/administration/reglages", label: "Réglages", icon: "sliders", permission: "settings:read", group: "Administration" },
   { href: "/parametres", label: "Mon compte", icon: "settings", group: "Compte" },
 ];

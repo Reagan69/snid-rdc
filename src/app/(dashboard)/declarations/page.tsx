@@ -39,7 +39,10 @@ export default async function DeclarationsPage({ searchParams }: { searchParams:
             <article key={d.id} className="card space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div><span className="font-mono text-sm">{d.numero}</span> · <b>{d.type}</b> · {resume(d.donnees)}</div>
-                <Badge tone={statutTone(d.statut)}>{d.statut}</Badge>
+                <div className="flex items-center gap-2">
+                  {d.approbations.some((a) => a.roleCode === "CHEF_RUE") && <Badge tone="amber">Validation directe</Badge>}
+                  <Badge tone={statutTone(d.statut)}>{d.statut}</Badge>
+                </div>
               </div>
               <p className="text-xs text-slate-500">Déposée le {formatDateFr(d.createdAt)} par {d.auteur.nomComplet} · {d.quartier.nom} · {d.rue.nom}{d.approbations.length ? ` · approuvée par : ${d.approbations.map((a) => a.roleCode).join(", ")}` : ""}</p>
               {d.motifRejet && <p className="text-sm text-red-700">Motif du rejet : {d.motifRejet}</p>}
